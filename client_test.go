@@ -268,7 +268,7 @@ func TestLogoutRequestCreationFail(t *testing.T) {
 		t.Fatal("Expected error on logout.")
 	}
 
-	expectedError := `Failed to create request: net/http: nil Context`
+	expectedError := `failed to create request: net/http: nil Context`
 	if err.Error() != expectedError {
 		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
 	}
@@ -285,7 +285,7 @@ func TestLogoutRequestSendingFail(t *testing.T) {
 		t.Fatal("Expected error on logout.")
 	}
 
-	expectedError := `Failed to send request: Post "invalid-url/api/auth/token/logout/": unsupported protocol scheme ""`
+	expectedError := `failed to send request: Post "invalid-url/api/auth/token/logout/": unsupported protocol scheme ""`
 	if err.Error() != expectedError {
 		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
 	}
@@ -303,7 +303,7 @@ func TestLogoutRequestUnauthorized(t *testing.T) {
 		t.Fatal("Expected error on logout.")
 	}
 
-	expectedError := `Failed to send request: Session token has expired or is invalid.`
+	expectedError := `failed to send request: Session token has expired or is invalid.`
 	if err.Error() != expectedError {
 		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
 	}
@@ -321,7 +321,7 @@ func TestLogoutRequestBadRequest(t *testing.T) {
 		t.Fatal("Expected error on logout.")
 	}
 
-	expectedError := `Logout failed with status 400 Bad Request (400)`
+	expectedError := `request failed with status 400 Bad Request (400)`
 	if err.Error() != expectedError {
 		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
 	}

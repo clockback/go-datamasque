@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -87,45 +86,13 @@ func (r *rawUser) toUser() User {
 }
 
 func (client *Client) ListUsers(ctx context.Context, credentials *LoginObject) ([]User, error) {
-	fullURL := client.BaseURL.JoinPath("api", "users/").String()
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
+	raw, err := sendRequest[[]rawUser](client, ctx, credentials, http.MethodGet, "/api/users/", nil, http.StatusOK)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to create request: %w", err)
+		return nil, err
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := client.doAuthenticated(credentials, req)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to send request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Listing users failed with status %s (%d)", resp.Status, resp.StatusCode)
-	}
-
-	contentType := resp.Header.Get("Content-Type")
-	if !strings.HasPrefix(contentType, "application/json") {
-		return nil, fmt.Errorf("Expected JSON response, got Content-Type: %s", contentType)
-	}
-
-	var usersData []rawUser
-	decoder := json.NewDecoder(resp.Body)
-	err = decoder.Decode(&usersData)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to decode response body: %w", err)
-	}
-
-	for i := range usersData {
-		err = client.validate.Struct(&usersData[i])
-		if err != nil {
-			return nil, fmt.Errorf("Failed validation on response body: %w", err)
-		}
-	}
-
-	users := make([]User, len(usersData))
-	for i, rawUser := range usersData {
+	users := make([]User, len(raw))
+	for i, rawUser := range raw {
 		users[i] = rawUser.toUser()
 	}
 

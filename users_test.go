@@ -73,7 +73,7 @@ func TestListUsersRequestCreationFail(t *testing.T) {
 		t.Fatal("Expected error on logout.")
 	}
 
-	expectedError := `Failed to create request: net/http: nil Context`
+	expectedError := `failed to create request: net/http: nil Context`
 	if err.Error() != expectedError {
 		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
 	}
@@ -90,7 +90,7 @@ func TestListUsersRequestSendingFail(t *testing.T) {
 		t.Fatal("Expected error on listing users.")
 	}
 
-	expectedError := `Failed to send request: Get "invalid-url/api/users/": unsupported protocol scheme ""`
+	expectedError := `failed to send request: Get "invalid-url/api/users/": unsupported protocol scheme ""`
 	if err.Error() != expectedError {
 		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
 	}
@@ -108,7 +108,7 @@ func TestListUsersRequestUnauthorized(t *testing.T) {
 		t.Fatal("Expected error on list users.")
 	}
 
-	expectedError := `Failed to send request: Session token has expired or is invalid.`
+	expectedError := `failed to send request: Session token has expired or is invalid.`
 	if err.Error() != expectedError {
 		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
 	}
@@ -126,7 +126,7 @@ func TestListUsersRequestBadRequest(t *testing.T) {
 		t.Fatal("Expected error on logout.")
 	}
 
-	expectedError := `Listing users failed with status 400 Bad Request (400)`
+	expectedError := `request failed with status 400 Bad Request (400)`
 	if err.Error() != expectedError {
 		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
 	}
@@ -146,7 +146,7 @@ func TestListUsersMalformedJSON(t *testing.T) {
 		t.Fatal("Expected error on logout.")
 	}
 
-	expectedError := `Failed to decode response body: invalid character 'i' looking for beginning of value`
+	expectedError := `failed to decode response body: invalid character 'i' looking for beginning of value`
 	if err.Error() != expectedError {
 		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
 	}
@@ -168,7 +168,7 @@ func TestListUsersFailValidation(t *testing.T) {
 		t.Fatal("Expected error on logout.")
 	}
 
-	expectedError := `Failed validation on response body: Key: 'rawUser.Id' Error:Field validation for 'Id' failed on the 'required' tag`
+	expectedError := `failed validation on response body: Key: 'rawUser.Id' Error:Field validation for 'Id' failed on the 'required' tag`
 	if err.Error() != expectedError {
 		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
 	}

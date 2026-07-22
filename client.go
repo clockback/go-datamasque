@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -191,24 +192,95 @@ func (client *Client) doAuthenticated(credentials *LoginObject, req *http.Reques
 	return resp, nil
 }
 
-func (client *Client) Logout(ctx context.Context, credentials *LoginObject) error {
-	fullURL := client.BaseURL.JoinPath("api", "auth", "token", "logout/").String()
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fullURL, nil)
-	if err != nil {
-		return fmt.Errorf("Failed to create request: %w", err)
+func (client *Client) validateResult(target any) error {
+	val := reflect.ValueOf(target)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := client.doAuthenticated(credentials, req)
-	if err != nil {
-		return fmt.Errorf("Failed to send request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("Logout failed with status %s (%d)", resp.Status, resp.StatusCode)
+	switch val.Kind() {
+	case reflect.Slice:
+		for i := 0; i < val.Len(); i++ {
+			if err := client.validate.Struct(val.Index(i).Interface()); err != nil {
+				return err
+			}
+		}
+	case reflect.Struct:
+		return client.validate.Struct(target)
 	}
 
 	return nil
+}
+
+func sendRequest[T any](
+	client *Client,
+	ctx context.Context,
+	credentials *LoginObject,
+	method string,
+	path string,
+	body any,
+	expectedStatus int,
+) (T, error) {
+	var result T
+
+	fullURL := client.BaseURL.JoinPath(path).String()
+
+	var bodyReader io.Reader
+	if body != nil {
+		buf := new(bytes.Buffer)
+		if err := json.NewEncoder(buf).Encode(body); err != nil {
+			return result, fmt.Errorf("failed to encode request body: %w", err)
+		}
+		bodyReader = buf
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, fullURL, bodyReader)
+	if err != nil {
+		return result, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := client.doAuthenticated(credentials, req)
+	if err != nil {
+		return result, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != expectedStatus {
+		return result, fmt.Errorf("request failed with status %s (%d)", resp.Status, resp.StatusCode)
+	} else if resp.StatusCode == http.StatusNoContent {
+		return result, nil
+	}
+
+	contentType := resp.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "application/json") {
+		return result, fmt.Errorf("expected JSON response, got Content-Type: %s", contentType)
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return result, fmt.Errorf("failed to decode response body: %w", err)
+	}
+
+	if err := client.validateResult(&result); err != nil {
+		return result, fmt.Errorf("failed validation on response body: %w", err)
+	}
+
+	return result, nil
+}
+
+func (client *Client) sendRequestStatusNoContent(
+	ctx context.Context,
+	credentials *LoginObject,
+	method string,
+	path string,
+	body any,
+) error {
+	_, err := sendRequest[struct{}](client, ctx, credentials, method, path, body, http.StatusNoContent)
+	return err
+}
+
+func (client *Client) Logout(ctx context.Context, credentials *LoginObject) error {
+	return client.sendRequestStatusNoContent(ctx, credentials, http.MethodPost, "/api/auth/token/logout/", nil)
 }
