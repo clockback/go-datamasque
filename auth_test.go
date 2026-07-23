@@ -223,8 +223,7 @@ func TestLogoutSuccess(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	err := client.Logout(context.TODO(), credentials)
-	if err != nil {
+	if err := client.Logout(context.TODO(), credentials); err != nil {
 		t.Fatalf("Error on attempted logout: %T: %v", err, err.Error())
 	}
 }

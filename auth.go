@@ -91,8 +91,7 @@ func (client *Client) Login(ctx context.Context, username string, password strin
 		return nil, fmt.Errorf("Failed to decode response body: %w", err)
 	}
 
-	err = client.validate.Struct(rawData)
-	if err != nil {
+	if err = client.validate.Struct(rawData); err != nil {
 		return nil, fmt.Errorf("Failed validation on response body: %w", err)
 	}
 

@@ -25,8 +25,7 @@ func TestNewTLSWarning(t *testing.T) {
 		Logger:             logger,
 	}
 
-	_, err := datamasque.New(&clientConfig)
-	if err != nil {
+	if _, err := datamasque.New(&clientConfig); err != nil {
 		t.Fatalf("Failed to create client due to %T: %v", err, err.Error())
 	}
 
