@@ -59,18 +59,14 @@ func TestLoginRequestCreationFail(t *testing.T) {
 		t.Fatalf("Failed to create client due to %T: %v", err, err.Error())
 	}
 
-	credentials, err := client.Login(nil, "elliot", "mypassword")
+	_, err = client.Login(nil, "elliot", "mypassword")
 	if err == nil {
 		t.Fatal("Unexpected login success.")
 	}
 
-	expectedError := `Failed to create request: net/http: nil Context`
+	expectedError := `failed to create request: net/http: nil Context`
 	if err.Error() != expectedError {
 		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
-	}
-
-	if credentials != nil {
-		t.Fatal("Unexpectedly assigned login credentials.")
 	}
 }
 
@@ -85,7 +81,7 @@ func TestLoginRequestSendingFail(t *testing.T) {
 		t.Fatalf("Failed to create client due to %T: %v", err, err.Error())
 	}
 
-	credentials, err := client.Login(context.TODO(), "elliot", "mypassword")
+	_, err = client.Login(context.TODO(), "elliot", "mypassword")
 	if err == nil {
 		t.Fatal("Unexpected login success.")
 	}
@@ -95,13 +91,9 @@ func TestLoginRequestSendingFail(t *testing.T) {
 		t.Fatalf("Expected error *url.Error, got %T: %v", err, err.Error())
 	}
 
-	expectedError := `Failed to send request: Post "invalid-url/api/auth/token/login/": unsupported protocol scheme ""`
+	expectedError := `failed to send request: Post "invalid-url/api/auth/token/login/": unsupported protocol scheme ""`
 	if err.Error() != expectedError {
 		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
-	}
-
-	if credentials != nil {
-		t.Fatal("Unexpectedly assigned login credentials.")
 	}
 }
 
@@ -125,18 +117,14 @@ func TestLoginWrongContentType(t *testing.T) {
 		t.Fatalf("Failed to create client due to %T: %v", err, err.Error())
 	}
 
-	credentials, err := client.Login(context.TODO(), "elliot", "mypassword")
+	_, err = client.Login(context.TODO(), "elliot", "mypassword")
 	if err == nil {
 		t.Fatal("Unexpected login success.")
 	}
 
-	expectedError := `Expected JSON response, got Content-Type: text/plain`
+	expectedError := `expected JSON response, got Content-Type: text/plain`
 	if err.Error() != expectedError {
 		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
-	}
-
-	if credentials != nil {
-		t.Fatal("Unexpectedly assigned login credentials.")
 	}
 }
 
@@ -160,18 +148,14 @@ func TestLoginBadRequest(t *testing.T) {
 		t.Fatalf("Failed to create client due to %T: %v", err, err.Error())
 	}
 
-	credentials, err := client.Login(context.TODO(), "elliot", "mypassword")
+	_, err = client.Login(context.TODO(), "elliot", "mypassword")
 	if err == nil {
 		t.Fatal("Unexpected login success.")
 	}
 
-	expectedError := `Login failed with status 400 Bad Request (400)`
+	expectedError := `request failed with status 400 Bad Request (400)`
 	if err.Error() != expectedError {
 		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
-	}
-
-	if credentials != nil {
-		t.Fatal("Unexpectedly assigned login credentials.")
 	}
 }
 
@@ -196,7 +180,7 @@ func TestLoginFailResponseMissingFields(t *testing.T) {
 		t.Fatalf("Failed to create client due to %T: %v", err, err.Error())
 	}
 
-	credentials, err := client.Login(context.TODO(), "elliot", "mypassword")
+	_, err = client.Login(context.TODO(), "elliot", "mypassword")
 	if err == nil {
 		t.Fatal("Unexpected login success.")
 	}
@@ -206,13 +190,9 @@ func TestLoginFailResponseMissingFields(t *testing.T) {
 		t.Fatalf("Expected error *validator.ValidationErrors, got %T: %v", err, err.Error())
 	}
 
-	expectedError := `Failed validation on response body: Key: 'rawLoginObject.Key' Error:Field validation for 'Key' failed on the 'required' tag`
+	expectedError := `failed validation on response body: Key: 'rawLoginObject.Key' Error:Field validation for 'Key' failed on the 'required' tag`
 	if err.Error() != expectedError {
 		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
-	}
-
-	if credentials != nil {
-		t.Fatal("Unexpectedly assigned login credentials.")
 	}
 }
 

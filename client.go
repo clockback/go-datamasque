@@ -133,6 +133,10 @@ func sendRequest[T any](
 
 	var bodyReader io.Reader
 	if body != nil {
+		if err := client.validateResult(body); err != nil {
+			return result, fmt.Errorf("failed validation on request body: %w", err)
+		}
+
 		buf := new(bytes.Buffer)
 		if err := json.NewEncoder(buf).Encode(body); err != nil {
 			return result, fmt.Errorf("failed to encode request body: %w", err)
@@ -148,7 +152,12 @@ func sendRequest[T any](
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := client.doAuthenticated(credentials, req)
+	var resp *http.Response
+	if credentials != nil {
+		resp, err = client.doAuthenticated(credentials, req)
+	} else {
+		resp, err = client.HTTPClient.Do(req)
+	}
 	if err != nil {
 		return result, fmt.Errorf("failed to send request: %w", err)
 	}
