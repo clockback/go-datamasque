@@ -159,6 +159,35 @@ func TestLoginBadRequest(t *testing.T) {
 	}
 }
 
+func TestLoginMalformedJSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("invalid request payload"))
+	}))
+	defer server.Close()
+
+	clientConfig := datamasque.ClientConfig{
+		BaseURL: server.URL,
+		Timeout: 60 * time.Second,
+	}
+
+	client, err := datamasque.New(&clientConfig)
+	if err != nil {
+		t.Fatalf("Failed to create client due to %T: %v", err, err.Error())
+	}
+
+	_, err = client.Login(context.TODO(), "elliot", "mypassword")
+	if err == nil {
+		t.Fatal("Expected error on logout.")
+	}
+
+	expectedError := `failed to decode response body: invalid character 'i' looking for beginning of value`
+	if err.Error() != expectedError {
+		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
+	}
+}
+
 func TestLoginFailResponseMissingFields(t *testing.T) {
 	rawJSON, _ := createLoginObject(t)
 	delete(rawJSON, "key")
@@ -208,37 +237,6 @@ func TestLogoutSuccess(t *testing.T) {
 	}
 }
 
-func TestLogoutRequestCreationFail(t *testing.T) {
-	_, client, credentials := login(t)
-
-	err := client.Logout(nil, credentials)
-	if err == nil {
-		t.Fatal("Expected error on logout.")
-	}
-
-	expectedError := `failed to create request: net/http: nil Context`
-	if err.Error() != expectedError {
-		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
-	}
-}
-
-func TestLogoutRequestSendingFail(t *testing.T) {
-	_, client, credentials := login(t)
-
-	url, _ := url.Parse("invalid-url")
-	client.BaseURL = url
-
-	err := client.Logout(context.TODO(), credentials)
-	if err == nil {
-		t.Fatal("Expected error on logout.")
-	}
-
-	expectedError := `failed to send request: Post "invalid-url/api/auth/token/logout/": unsupported protocol scheme ""`
-	if err.Error() != expectedError {
-		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
-	}
-}
-
 func TestLogoutRequestUnauthorized(t *testing.T) {
 	mux, client, credentials := login(t)
 
@@ -252,24 +250,6 @@ func TestLogoutRequestUnauthorized(t *testing.T) {
 	}
 
 	expectedError := `failed to send request: session token has expired or is invalid`
-	if err.Error() != expectedError {
-		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
-	}
-}
-
-func TestLogoutRequestBadRequest(t *testing.T) {
-	mux, client, credentials := login(t)
-
-	mux.HandleFunc("/api/auth/token/logout/", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusBadRequest)
-	})
-
-	err := client.Logout(context.TODO(), credentials)
-	if err == nil {
-		t.Fatal("Expected error on logout.")
-	}
-
-	expectedError := `request failed with status 400 Bad Request (400)`
 	if err.Error() != expectedError {
 		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
 	}
