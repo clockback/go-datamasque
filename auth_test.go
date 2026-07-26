@@ -251,7 +251,7 @@ func TestLogoutRequestUnauthorized(t *testing.T) {
 		t.Fatal("Expected error on logout.")
 	}
 
-	expectedError := `failed to send request: Session token has expired or is invalid.`
+	expectedError := `failed to send request: session token has expired or is invalid`
 	if err.Error() != expectedError {
 		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
 	}

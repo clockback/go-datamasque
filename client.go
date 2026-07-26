@@ -43,12 +43,12 @@ func loggerOrDefault(logger *slog.Logger) *slog.Logger {
 func New(config *ClientConfig) (*Client, error) {
 	parsedURL, err := url.Parse(config.BaseURL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse URL: %w", err)
 	}
 
 	transport, ok := http.DefaultTransport.(*http.Transport)
 	if !ok {
-		return nil, fmt.Errorf("Failed to assert default transport")
+		return nil, fmt.Errorf("failed to assert default transport")
 	}
 	clonedTransport := transport.Clone()
 
@@ -92,7 +92,7 @@ func (client *Client) doAuthenticated(credentials *LoginObject, req *http.Reques
 	if resp.StatusCode == http.StatusUnauthorized {
 		io.Copy(io.Discard, io.LimitReader(resp.Body, 512))
 		resp.Body.Close()
-		return nil, fmt.Errorf("Session token has expired or is invalid.")
+		return nil, fmt.Errorf("session token has expired or is invalid")
 	}
 
 	return resp, nil
