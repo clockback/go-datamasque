@@ -226,3 +226,49 @@ func TestListUsersSuccess(t *testing.T) {
 
 	assertUserEqual(t, &user, &users[0])
 }
+
+func TestCreateUserSuccess(t *testing.T) {
+	mux, client, credentials := login(t)
+	rawJSON, returnUser := createUser(t)
+
+	mux.HandleFunc("/api/users/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(rawJSON)
+	})
+
+	user := datamasque.CreateUserRequestPayload{
+		Username: "bob",
+		Password: "mypassword",
+		Email:    "bob@mycompany.com",
+		Roles:    []datamasque.UserRole{datamasque.UserRoleAdmin},
+	}
+
+	newUser, err := client.CreateUser(context.TODO(), credentials, &user)
+	if err != nil {
+		t.Fatalf("Error on attempt to create user: %v", err.Error())
+	}
+
+	assertUserEqual(t, &newUser, &returnUser)
+}
+
+func TestCreateUserNoRoles(t *testing.T) {
+	_, client, credentials := login(t)
+
+	user := datamasque.CreateUserRequestPayload{
+		Username: "bob",
+		Password: "mypassword",
+		Email:    "bob@mycompany.com",
+		Roles:    []datamasque.UserRole{},
+	}
+
+	_, err := client.CreateUser(context.TODO(), credentials, &user)
+	if err == nil {
+		t.Fatal("Unexpected user creation success.")
+	}
+
+	expectedError := "cannot create user with zero roles"
+	if err.Error() != expectedError {
+		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
+	}
+}

@@ -85,6 +85,23 @@ func (r *rawUser) toUser() User {
 	}
 }
 
+type CreateUserRequestPayload struct {
+	Username             string
+	Password             string
+	Email                string
+	Roles                []UserRole
+	HasTemporaryPassword *bool
+}
+
+type createUserRequestPayloadRepeatPassword struct {
+	Username             string     `json:"username" validate:"min=1,max=255"`
+	Password             string     `json:"password" validate:"min=1,max=140"`
+	RepeatedPassword     string     `json:"re_password" validate:"required"`
+	Email                string     `json:"email" validate:"min=1,max=254"`
+	Roles                []UserRole `json:"user_roles,omitempty"`
+	HasTemporaryPassword bool       `json:"has_temporary_password"`
+}
+
 func (client *Client) ListUsers(ctx context.Context, credentials *LoginObject) ([]User, error) {
 	raw, err := sendRequest[[]rawUser](client, ctx, credentials, http.MethodGet, "/api/users/", nil, http.StatusOK)
 	if err != nil {
@@ -97,4 +114,45 @@ func (client *Client) ListUsers(ctx context.Context, credentials *LoginObject) (
 	}
 
 	return users, nil
+}
+
+func (client *Client) CreateUser(
+	ctx context.Context,
+	credentials *LoginObject,
+	payload *CreateUserRequestPayload,
+) (User, error) {
+	if payload.Roles != nil && len(payload.Roles) == 0 {
+		return User{}, fmt.Errorf("cannot create user with zero roles")
+	}
+
+	var hasTemporaryPassword bool
+	if payload.HasTemporaryPassword == nil {
+		hasTemporaryPassword = true
+	} else {
+		hasTemporaryPassword = *payload.HasTemporaryPassword
+	}
+
+	updatedPayload := createUserRequestPayloadRepeatPassword{
+		Username:             payload.Username,
+		Password:             payload.Password,
+		RepeatedPassword:     payload.Password,
+		Email:                payload.Email,
+		Roles:                payload.Roles,
+		HasTemporaryPassword: hasTemporaryPassword,
+	}
+
+	raw, err := sendRequest[rawUser](
+		client,
+		ctx,
+		credentials,
+		http.MethodPost,
+		"/api/users/",
+		updatedPayload,
+		http.StatusCreated,
+	)
+	if err != nil {
+		return User{}, err
+	}
+
+	return raw.toUser(), nil
 }
