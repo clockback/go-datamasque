@@ -3,8 +3,11 @@ package datamasque_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/clockback/go-datamasque"
 	"net/http"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 )
@@ -48,9 +51,163 @@ func createUser(t *testing.T) (map[string]any, datamasque.User) {
 	return rawJSON, user
 }
 
+func checkBoolValues(
+	errors []string,
+	received bool,
+	expected bool,
+	receivedUsername string,
+	expectedUsername string,
+	fieldName string,
+	description string,
+) []string {
+	if received && !expected {
+		return append(errors, fmt.Sprintf("Expected user %q not %s.", receivedUsername, description))
+	} else if !received && expected {
+		return append(errors, fmt.Sprintf("Expected user %q %s.", receivedUsername, description))
+	}
+	return errors
+}
+
+func validateUserEqual(received *datamasque.User, expected *datamasque.User) []string {
+	errors := []string{}
+
+	if received == nil {
+		errors = append(errors, "Received user has nil pointer.")
+	}
+	if expected == nil {
+		errors = append(errors, "Expected user has nil pointer.")
+	}
+	if len(errors) > 0 {
+		return errors
+	}
+
+	if received.Id != expected.Id {
+		err := fmt.Sprintf("Expected user to have ID %d, but had ID %d.", expected.Id, received.Id)
+		errors = append(errors, err)
+	}
+
+	username := received.Username
+
+	if username != expected.Username {
+		err := fmt.Sprintf(
+			"Expected user with ID %d to have name %v, but had %v.",
+			received.Id,
+			expected.Username,
+			username,
+		)
+		errors = append(errors, err)
+	}
+
+	if received.Email != expected.Email {
+		err := fmt.Sprintf(
+			"Expected user %q to have email %v, but had %v.",
+			username,
+			expected.Email,
+			received.Email,
+		)
+		errors = append(errors, err)
+	}
+
+	if received.DateJoined != expected.DateJoined {
+		err := fmt.Sprintf(
+			"Expected date joined of user %q to be %v, but had %v.",
+			username,
+			expected.DateJoined,
+			received.DateJoined,
+		)
+		errors = append(errors, err)
+	}
+
+	errors = checkBoolValues(
+		errors,
+		received.HasTemporaryPassword,
+		expected.HasTemporaryPassword,
+		username,
+		expected.Username,
+		"HasTemporaryPassword",
+		"have temporary password",
+	)
+	errors = checkBoolValues(
+		errors,
+		received.IsActive,
+		expected.IsActive,
+		username,
+		expected.Username,
+		"IsActive",
+		"be active",
+	)
+	errors = checkBoolValues(
+		errors,
+		received.IsStaff,
+		expected.IsStaff,
+		username,
+		expected.Username,
+		"IsStaff",
+		"be staff",
+	)
+	errors = checkBoolValues(
+		errors,
+		received.IsSuperuser,
+		expected.IsSuperuser,
+		username,
+		expected.Username,
+		"IsSuperuser",
+		"be a superuser",
+	)
+	errors = checkBoolValues(
+		errors,
+		received.IsSSOUser,
+		expected.IsSSOUser,
+		username,
+		expected.Username,
+		"IsSSOUser",
+		"be an SSO user",
+	)
+	errors = checkBoolValues(
+		errors,
+		received.IsSubscribedToSDDUpdates,
+		expected.IsSubscribedToSDDUpdates,
+		username,
+		expected.Username,
+		"IsSubscribedToSDDUpdates",
+		"be subscribed to SDD updates",
+	)
+
+	if !slices.Equal(received.Roles, expected.Roles) {
+		err := fmt.Sprintf(
+			"Expected user %q to have roles %v, but had %v.",
+			username,
+			expected.Roles,
+			received.Roles,
+		)
+		errors = append(errors, err)
+	}
+
+	if !slices.Equal(received.Permissions, expected.Permissions) {
+		err := fmt.Sprintf(
+			"Expected user %q to have permissions %v, but had %v.",
+			username,
+			expected.Permissions,
+			received.Permissions,
+		)
+		errors = append(errors, err)
+	}
+
+	return errors
+}
+
+func assertUserEqual(t *testing.T, received *datamasque.User, expected *datamasque.User) {
+	errors := validateUserEqual(received, expected)
+	if len(errors) == 0 {
+		return
+	}
+
+	t.Fatalf("Validation error comparing users:\n%s", strings.Join(errors, "\n"))
+}
+
 func TestListUsersSuccess(t *testing.T) {
 	mux, client, credentials := login(t)
-	rawJSON, _ := createUser(t)
+	rawJSON, user := createUser(t)
 
 	mux.HandleFunc("/api/users/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -58,8 +215,14 @@ func TestListUsersSuccess(t *testing.T) {
 		json.NewEncoder(w).Encode([]map[string]any{rawJSON})
 	})
 
-	_, err := client.ListUsers(context.TODO(), credentials)
+	users, err := client.ListUsers(context.TODO(), credentials)
 	if err != nil {
 		t.Fatalf("Error on attempt to list users: %v", err.Error())
 	}
+
+	if noUsers := len(users); noUsers != 1 {
+		t.Fatalf("Incorrect number of users returned. Expected 1, got %d", noUsers)
+	}
+
+	assertUserEqual(t, &user, &users[0])
 }
