@@ -53,11 +53,18 @@ type rawUser struct {
 	Permissions              *[]string   `json:"user_permissions" validate:"required"`
 }
 
+type rawUserWithToken struct {
+	rawUser
+
+	APIToken *string `json:"api_token" validate:"required"`
+}
+
 type User struct {
 	Id                       int        `json:"id"`
 	Username                 string     `json:"username"`
 	Email                    string     `json:"email"`
 	DateJoined               time.Time  `json:"date_joined"`
+	APIToken                 *string    `json:"api_token"`
 	HasTemporaryPassword     bool       `json:"has_temporary_password"`
 	IsActive                 bool       `json:"is_active"`
 	IsStaff                  bool       `json:"is_staff"`
@@ -83,6 +90,12 @@ func (r *rawUser) toUser() User {
 		Roles:                    *r.Roles,
 		Permissions:              *r.Permissions,
 	}
+}
+
+func (r *rawUserWithToken) toUser() User {
+	user := r.rawUser.toUser()
+	user.APIToken = r.APIToken
+	return user
 }
 
 type CreateUserRequestPayload struct {
@@ -149,6 +162,23 @@ func (client *Client) CreateUser(
 		"/api/users/",
 		updatedPayload,
 		http.StatusCreated,
+	)
+	if err != nil {
+		return User{}, err
+	}
+
+	return raw.toUser(), nil
+}
+
+func (client *Client) GetMyUser(ctx context.Context, credentials *LoginObject) (User, error) {
+	raw, err := sendRequest[rawUserWithToken](
+		client,
+		ctx,
+		credentials,
+		http.MethodGet,
+		"/api/users/me/",
+		nil,
+		http.StatusOK,
 	)
 	if err != nil {
 		return User{}, err

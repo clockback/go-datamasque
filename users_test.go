@@ -118,6 +118,22 @@ func validateUserEqual(received *datamasque.User, expected *datamasque.User) []s
 		errors = append(errors, err)
 	}
 
+	if received.APIToken == nil && expected.APIToken != nil {
+		err := fmt.Sprintf("Expected user %q to have API token %v, but had none.", username, *expected.APIToken)
+		errors = append(errors, err)
+	} else if received.APIToken != nil && expected.APIToken == nil {
+		err := fmt.Sprintf("Expected user %q to have API no token, but had %v.", username, *received.APIToken)
+		errors = append(errors, err)
+	} else if received.APIToken != nil && *received.APIToken != *expected.APIToken {
+		err := fmt.Sprintf(
+			"Expected user %q to have API token %v, but had %v.",
+			username,
+			*expected.APIToken,
+			*received.APIToken,
+		)
+		errors = append(errors, err)
+	}
+
 	errors = checkBoolValues(
 		errors,
 		received.HasTemporaryPassword,
@@ -271,4 +287,24 @@ func TestCreateUserNoRoles(t *testing.T) {
 	if err.Error() != expectedError {
 		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
 	}
+}
+
+func TestGetMyUserSuccess(t *testing.T) {
+	mux, client, credentials := login(t)
+	rawJSON, returnUser := createUser(t)
+	rawJSON["api_token"] = "abc"
+	returnUser.APIToken = Ptr("abc")
+
+	mux.HandleFunc("/api/users/me/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(rawJSON)
+	})
+
+	myUser, err := client.GetMyUser(context.TODO(), credentials)
+	if err != nil {
+		t.Fatalf("Error on attempt to get authenticated user: %v", err.Error())
+	}
+
+	assertUserEqual(t, &myUser, &returnUser)
 }
