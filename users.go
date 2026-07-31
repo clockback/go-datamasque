@@ -186,3 +186,20 @@ func (client *Client) GetMyUser(ctx context.Context, credentials *LoginObject) (
 
 	return raw.toUser(), nil
 }
+
+func (client *Client) GetUserByID(ctx context.Context, credentials *LoginObject, id int) (User, error) {
+	raw, err := sendRequest[rawUser](
+		client,
+		ctx,
+		credentials,
+		http.MethodGet,
+		fmt.Sprintf("/api/users/%d/", id),
+		nil,
+		http.StatusOK,
+	)
+	if err != nil {
+		return User{}, err
+	}
+
+	return raw.toUser(), nil
+}

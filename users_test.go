@@ -308,3 +308,21 @@ func TestGetMyUserSuccess(t *testing.T) {
 
 	assertUserEqual(t, &myUser, &returnUser)
 }
+
+func TestGetUserByIDSuccess(t *testing.T) {
+	mux, client, credentials := login(t)
+	rawJSON, returnUser := createUser(t)
+
+	mux.HandleFunc("/api/users/123/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(rawJSON)
+	})
+
+	myUser, err := client.GetUserByID(context.TODO(), credentials, 123)
+	if err != nil {
+		t.Fatalf("Error on attempt to get user with ID 123: %v", err.Error())
+	}
+
+	assertUserEqual(t, &myUser, &returnUser)
+}
