@@ -115,6 +115,31 @@ type createUserRequestPayloadRepeatPassword struct {
 	HasTemporaryPassword bool       `json:"has_temporary_password"`
 }
 
+type EditUserRequestPayload struct {
+	Username                 *string
+	Email                    *string
+	DateJoined               *time.Time
+	IsActive                 *bool
+	IsSuperuser              *bool
+	IsSubscribedToSDDUpdates *bool
+	Roles                    []UserRole
+	CurrentPassword          *string
+	NewPassword              *string
+}
+
+type editUserRequestPayloadRepeatPassword struct {
+	Username                 *string    `json:"username,omitempty"`
+	Email                    *string    `json:"email,omitempty"`
+	DateJoined               *time.Time `json:"date_joined,omitempty"`
+	IsActive                 *bool      `json:"is_active,omitempty"`
+	IsSuperuser              *bool      `json:"is_superuser,omitempty"`
+	IsSubscribedToSDDUpdates *bool      `json:"is_subscribed_to_sdd_updates,omitempty"`
+	Roles                    []UserRole `json:"user_roles,omitempty"`
+	CurrentPassword          *string    `json:"current_password,omitempty"`
+	NewPassword              *string    `json:"new_password,omitempty"`
+	RepeatNewPassword        *string    `json:"re_new_password,omitempty"`
+}
+
 func (client *Client) ListUsers(ctx context.Context, credentials *LoginObject) ([]User, error) {
 	raw, err := sendRequest[[]rawUser](client, ctx, credentials, http.MethodGet, "/api/users/", nil, http.StatusOK)
 	if err != nil {
@@ -195,6 +220,47 @@ func (client *Client) GetUserByID(ctx context.Context, credentials *LoginObject,
 		http.MethodGet,
 		fmt.Sprintf("/api/users/%d/", id),
 		nil,
+		http.StatusOK,
+	)
+	if err != nil {
+		return User{}, err
+	}
+
+	return raw.toUser(), nil
+}
+
+func (client *Client) EditUserByID(
+	ctx context.Context,
+	credentials *LoginObject,
+	id int,
+	payload *EditUserRequestPayload,
+) (User, error) {
+	if payload.Roles != nil && len(payload.Roles) == 0 {
+		return User{}, fmt.Errorf("cannot edit user to have zero roles")
+	} else if payload.CurrentPassword == nil && payload.NewPassword != nil {
+		return User{}, fmt.Errorf("must provide current password to change password")
+	}
+
+	updatedPayload := editUserRequestPayloadRepeatPassword{
+		Username:                 payload.Username,
+		Email:                    payload.Email,
+		DateJoined:               payload.DateJoined,
+		IsActive:                 payload.IsActive,
+		IsSuperuser:              payload.IsSuperuser,
+		IsSubscribedToSDDUpdates: payload.IsSubscribedToSDDUpdates,
+		Roles:                    payload.Roles,
+		CurrentPassword:          payload.CurrentPassword,
+		NewPassword:              payload.NewPassword,
+		RepeatNewPassword:        payload.NewPassword,
+	}
+
+	raw, err := sendRequest[rawUser](
+		client,
+		ctx,
+		credentials,
+		http.MethodPatch,
+		fmt.Sprintf("/api/users/%d/", id),
+		updatedPayload,
 		http.StatusOK,
 	)
 	if err != nil {

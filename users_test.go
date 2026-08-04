@@ -326,3 +326,69 @@ func TestGetUserByIDSuccess(t *testing.T) {
 
 	assertUserEqual(t, &myUser, &returnUser)
 }
+
+func TestEditUserByIDSuccess(t *testing.T) {
+	mux, client, credentials := login(t)
+	rawJSON, returnUser := createUser(t)
+
+	mux.HandleFunc("/api/users/123/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(rawJSON)
+	})
+
+	editPayload := datamasque.EditUserRequestPayload{
+		Username:                 Ptr("bob"),
+		Email:                    Ptr("bob@mycompany.com"),
+		DateJoined:               Ptr(returnUser.DateJoined),
+		IsActive:                 Ptr(true),
+		IsSuperuser:              Ptr(true),
+		IsSubscribedToSDDUpdates: Ptr(false),
+		Roles:                    []datamasque.UserRole{"admin"},
+		CurrentPassword:          Ptr("oldpassword"),
+		NewPassword:              Ptr("newpassword"),
+	}
+
+	editedUser, err := client.EditUserByID(context.TODO(), credentials, 123, &editPayload)
+	if err != nil {
+		t.Fatalf("Error on attempt to edit user with ID 123: %v", err.Error())
+	}
+
+	assertUserEqual(t, &editedUser, &returnUser)
+}
+
+func TestEditUserByIDNoRoles(t *testing.T) {
+	_, client, credentials := login(t)
+
+	editPayload := datamasque.EditUserRequestPayload{
+		Roles: []datamasque.UserRole{},
+	}
+
+	_, err := client.EditUserByID(context.TODO(), credentials, 123, &editPayload)
+	if err == nil {
+		t.Fatal("Unexpected user edit success.")
+	}
+
+	expectedError := "cannot edit user to have zero roles"
+	if err.Error() != expectedError {
+		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
+	}
+}
+
+func TestEditUserByIDMissingPassword(t *testing.T) {
+	_, client, credentials := login(t)
+
+	editPayload := datamasque.EditUserRequestPayload{
+		NewPassword: Ptr("mynewpassword"),
+	}
+
+	_, err := client.EditUserByID(context.TODO(), credentials, 123, &editPayload)
+	if err == nil {
+		t.Fatal("Unexpected user edit success.")
+	}
+
+	expectedError := "must provide current password to change password"
+	if err.Error() != expectedError {
+		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
+	}
+}
