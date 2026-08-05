@@ -392,3 +392,26 @@ func TestEditUserByIDMissingPassword(t *testing.T) {
 		t.Fatalf("Expected %q, got %q.", expectedError, err.Error())
 	}
 }
+
+func TestResetPassword(t *testing.T) {
+	mux, client, credentials := login(t)
+	expectedPassword := "abcdefghijklmnopqrstuvwxyz"
+	rawJSON := map[string]any{
+		"password": expectedPassword,
+	}
+
+	mux.HandleFunc("/api/users/123/reset-password/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(rawJSON)
+	})
+
+	newPassword, err := client.ResetPassword(context.TODO(), credentials, 123)
+	if err != nil {
+		t.Fatalf("Error on attempt to reset password for user with ID 123: %v", err.Error())
+	}
+
+	if newPassword != expectedPassword {
+		t.Fatalf("Expected new password to be %v, got %v.", expectedPassword, newPassword)
+	}
+}

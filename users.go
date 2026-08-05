@@ -140,6 +140,10 @@ type editUserRequestPayloadRepeatPassword struct {
 	RepeatNewPassword        *string    `json:"re_new_password,omitempty"`
 }
 
+type resetPasswordResponsePayload struct {
+	Password string `json:"password"`
+}
+
 func (client *Client) ListUsers(ctx context.Context, credentials *LoginObject) ([]User, error) {
 	raw, err := sendRequest[[]rawUser](client, ctx, credentials, http.MethodGet, "/api/users/", nil, http.StatusOK)
 	if err != nil {
@@ -268,4 +272,21 @@ func (client *Client) EditUserByID(
 	}
 
 	return raw.toUser(), nil
+}
+
+func (client *Client) ResetPassword(ctx context.Context, credentials *LoginObject, id int) (string, error) {
+	response, err := sendRequest[resetPasswordResponsePayload](
+		client,
+		ctx,
+		credentials,
+		http.MethodPost,
+		fmt.Sprintf("/api/users/%d/reset-password/", id),
+		nil,
+		http.StatusOK,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	return response.Password, nil
 }
