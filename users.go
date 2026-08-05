@@ -141,7 +141,7 @@ type editUserRequestPayloadRepeatPassword struct {
 }
 
 type resetPasswordResponsePayload struct {
-	Password string `json:"password"`
+	Password string `json:"password" validate:"required"`
 }
 
 func (client *Client) ListUsers(ctx context.Context, credentials *LoginObject) ([]User, error) {
@@ -289,4 +289,14 @@ func (client *Client) ResetPassword(ctx context.Context, credentials *LoginObjec
 	}
 
 	return response.Password, nil
+}
+
+func (client *Client) DeleteUserByID(ctx context.Context, credentials *LoginObject, id int) error {
+	return client.sendRequestStatusNoContent(
+		ctx,
+		credentials,
+		http.MethodDelete,
+		fmt.Sprintf("/api/users/%d/", id),
+		nil,
+	)
 }

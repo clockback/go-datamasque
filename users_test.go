@@ -415,3 +415,16 @@ func TestResetPassword(t *testing.T) {
 		t.Fatalf("Expected new password to be %v, got %v.", expectedPassword, newPassword)
 	}
 }
+
+func TestDeleteUserByIDSuccess(t *testing.T) {
+	mux, client, credentials := login(t)
+
+	mux.HandleFunc("/api/users/123/", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	err := client.DeleteUserByID(context.TODO(), credentials, 123)
+	if err != nil {
+		t.Fatalf("Error on attempt to delete user with ID 123: %v", err.Error())
+	}
+}
