@@ -71,3 +71,22 @@ func TestGetMyProfileSuccess(t *testing.T) {
 
 	assertProfileEqual(t, &myProfile, &returnProfile)
 }
+
+func TestUpdateMyProfileSuccess(t *testing.T) {
+	mux, client, credentials := login(t)
+
+	updatePayload := datamasque.UpdateMyProfilePayload{
+		GitDirectoryPath: &datamasque.GitDirectoryPathSetting{
+			Path: Ptr("updated/path"),
+		},
+	}
+
+	mux.HandleFunc("/api/users/me/profile/", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	err := client.UpdateMyProfile(context.TODO(), credentials, &updatePayload)
+	if err != nil {
+		t.Fatalf("Error on attempt to update authenticated user's profile: %v", err.Error())
+	}
+}
